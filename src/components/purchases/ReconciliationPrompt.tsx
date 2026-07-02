@@ -2,20 +2,24 @@ import { Modal } from '../common/Modal'
 import type { Purchase } from '../../types/database'
 
 export function ReconciliationPrompt({
+  itemName,
   existingPurchase,
   newEstimatedExpiry,
+  addedQuantity,
   onExtend,
   onNewBatch,
   onClose,
 }: {
+  itemName?: string
   existingPurchase: Purchase
   newEstimatedExpiry: string | null
+  addedQuantity: number
   onExtend: () => void
   onNewBatch: () => void
   onClose: () => void
 }) {
   return (
-    <Modal title="Already in stock" onClose={onClose}>
+    <Modal title={itemName ? `Already in stock — ${itemName}` : 'Already in stock'} onClose={onClose}>
       <p className="mb-4 text-sm text-slate-600">
         You already have a batch from{' '}
         <strong>{new Date(existingPurchase.purchase_date).toLocaleDateString()}</strong>
@@ -32,7 +36,8 @@ export function ReconciliationPrompt({
           <span className="font-medium text-slate-900">Extend existing batch</span>
           <br />
           <span className="text-slate-500">
-            Update expiry to {newEstimatedExpiry ? new Date(newEstimatedExpiry).toLocaleDateString() : 'no set expiry'}
+            Update expiry to {newEstimatedExpiry ? new Date(newEstimatedExpiry).toLocaleDateString() : 'no set expiry'}, quantity{' '}
+            {existingPurchase.quantity} → {existingPurchase.quantity + addedQuantity}
           </span>
         </button>
         <button

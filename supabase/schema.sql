@@ -62,6 +62,7 @@ create table purchases (
   previous_stock_extended boolean not null default false,
   used_date date,
   usage_status usage_status not null default 'active',
+  quantity integer not null default 1 check (quantity > 0),
   created_at timestamptz not null default now()
 );
 create index purchases_item_idx on purchases (item_id);

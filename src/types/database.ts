@@ -47,5 +47,6 @@ export interface Purchase {
   previous_stock_extended: boolean
   used_date: string | null
   usage_status: UsageStatus
+  quantity: number
   created_at: string
 }

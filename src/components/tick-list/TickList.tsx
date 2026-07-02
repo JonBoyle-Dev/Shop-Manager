@@ -6,6 +6,7 @@ import { CategoryFilterBar } from './CategoryFilterBar'
 import { DietAllergyFilter } from './DietAllergyFilter'
 import { ItemCard } from './ItemCard'
 import { LogPurchaseModal } from '../purchases/LogPurchaseModal'
+import { BatchLogPurchasesModal } from '../purchases/BatchLogPurchasesModal'
 import type { Item } from '../../types/database'
 
 export function TickList() {
@@ -18,6 +19,8 @@ export function TickList() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [matchDietOnly, setMatchDietOnly] = useState(false)
   const [purchaseItem, setPurchaseItem] = useState<Item | null>(null)
+  const [boughtQuantities, setBoughtQuantities] = useState<Record<string, number>>({})
+  const [showBatchModal, setShowBatchModal] = useState(false)
 
   const { visibleItems, hiddenForAllergyCount } = useMemo(() => {
     if (!items) return { visibleItems: [] as Item[], hiddenForAllergyCount: 0 }
@@ -42,6 +45,33 @@ export function TickList() {
 
     return { visibleItems: filtered, hiddenForAllergyCount: hiddenForAllergy }
   }, [items, currentMember, selectedCategory, matchDietOnly])
+
+  function toggleBought(itemId: string) {
+    setBoughtQuantities((prev) => {
+      const next = { ...prev }
+      if (itemId in next) {
+        delete next[itemId]
+      } else {
+        next[itemId] = 1
+      }
+      return next
+    })
+  }
+
+  function setBoughtQuantity(itemId: string, quantity: number) {
+    setBoughtQuantities((prev) => ({ ...prev, [itemId]: quantity }))
+  }
+
+  const boughtItems = useMemo(
+    () =>
+      Object.entries(boughtQuantities)
+        .map(([itemId, quantity]) => {
+          const item = items?.find((i) => i.id === itemId)
+          return item ? { item, quantity } : null
+        })
+        .filter((entry): entry is { item: Item; quantity: number } => entry !== null),
+    [boughtQuantities, items]
+  )
 
   if (categoriesLoading || itemsLoading) return <p className="p-6 text-center text-slate-500">Loading items…</p>
   if (error) return <p className="p-6 text-center text-rose-600">Couldn't load items: {(error as Error).message}</p>
@@ -68,6 +98,10 @@ export function TickList() {
                 toggleSelection.mutate({ itemId: item.id, memberId: currentMember.id, isTicked })
               }}
               onLogPurchase={() => setPurchaseItem(item)}
+              isBought={item.id in boughtQuantities}
+              boughtQuantity={boughtQuantities[item.id] ?? 1}
+              onToggleBought={() => toggleBought(item.id)}
+              onBoughtQuantityChange={(quantity) => setBoughtQuantity(item.id, quantity)}
             />
           )
         })}
@@ -75,6 +109,30 @@ export function TickList() {
       </div>
 
       {purchaseItem && <LogPurchaseModal item={purchaseItem} onClose={() => setPurchaseItem(null)} />}
+
+      {boughtItems.length > 0 && !showBatchModal && (
+        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-white p-3 shadow-lg">
+          <div className="mx-auto flex max-w-lg items-center justify-between">
+            <span className="text-sm text-slate-600">
+              {boughtItems.length} item{boughtItems.length === 1 ? '' : 's'} marked as got
+            </span>
+            <button
+              onClick={() => setShowBatchModal(true)}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+            >
+              Log Purchases
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showBatchModal && (
+        <BatchLogPurchasesModal
+          items={boughtItems}
+          onClose={() => setShowBatchModal(false)}
+          onDone={() => setBoughtQuantities({})}
+        />
+      )}
     </div>
   )
 }

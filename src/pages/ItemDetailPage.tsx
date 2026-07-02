@@ -67,7 +67,10 @@ export function ItemDetailPage() {
           {purchases?.map((purchase) => (
             <div key={purchase.id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 text-sm">
               <div>
-                <p className="font-medium text-slate-900">{new Date(purchase.purchase_date).toLocaleDateString()}</p>
+                <p className="font-medium text-slate-900">
+                  {new Date(purchase.purchase_date).toLocaleDateString()}
+                  {purchase.quantity > 1 && <span className="ml-1 text-slate-400">×{purchase.quantity}</span>}
+                </p>
                 <p className="text-slate-500">
                   {USAGE_LABEL[purchase.usage_status]}
                   {purchase.estimated_expiry && ` · expires ${new Date(purchase.estimated_expiry).toLocaleDateString()}`}

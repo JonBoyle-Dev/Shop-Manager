@@ -48,7 +48,7 @@ function invalidatePurchaseQueries(queryClient: ReturnType<typeof useQueryClient
 export function useLogPurchase() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (purchase: Pick<Purchase, 'item_id' | 'purchase_date' | 'estimated_expiry'>) => {
+    mutationFn: async (purchase: Pick<Purchase, 'item_id' | 'purchase_date' | 'estimated_expiry' | 'quantity'>) => {
       const { data, error } = await supabase.from('purchases').insert(purchase).select().single()
       if (error) throw error
       return data as Purchase
@@ -57,14 +57,22 @@ export function useLogPurchase() {
   })
 }
 
-/** Reconciliation "extend": update the existing batch's expiry instead of logging a new one. */
+/** Reconciliation "extend": update the existing batch's expiry/quantity instead of logging a new one. */
 export function useExtendPurchase() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, estimated_expiry }: { id: string; estimated_expiry: string | null }) => {
+    mutationFn: async ({
+      id,
+      estimated_expiry,
+      quantity,
+    }: {
+      id: string
+      estimated_expiry: string | null
+      quantity: number
+    }) => {
       const { data, error } = await supabase
         .from('purchases')
-        .update({ estimated_expiry, previous_stock_extended: true })
+        .update({ estimated_expiry, quantity, previous_stock_extended: true })
         .eq('id', id)
         .select()
         .single()

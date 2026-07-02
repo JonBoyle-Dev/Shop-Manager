@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Modal } from '../common/Modal'
+import { QuantityStepper } from '../common/QuantityStepper'
 import { ReconciliationPrompt } from './ReconciliationPrompt'
 import { useActivePurchases, useLogPurchase, useExtendPurchase } from '../../hooks/usePurchases'
 import { useFulfillSelections } from '../../hooks/useSelections'
@@ -8,6 +9,7 @@ import type { Item } from '../../types/database'
 
 export function LogPurchaseModal({ item, onClose }: { item: Item; onClose: () => void }) {
   const [purchaseDate, setPurchaseDate] = useState(() => toDateInputValue(new Date()))
+  const [quantity, setQuantity] = useState(1)
   const { data: activePurchases, isLoading } = useActivePurchases(item.id)
   const logPurchase = useLogPurchase()
   const extendPurchase = useExtendPurchase()
@@ -23,7 +25,7 @@ export function LogPurchaseModal({ item, onClose }: { item: Item; onClose: () =>
 
   function logAsNewBatch() {
     logPurchase.mutate(
-      { item_id: item.id, purchase_date: purchaseDate, estimated_expiry: estimatedExpiry },
+      { item_id: item.id, purchase_date: purchaseDate, estimated_expiry: estimatedExpiry, quantity },
       { onSuccess: afterLogged }
     )
   }
@@ -32,11 +34,16 @@ export function LogPurchaseModal({ item, onClose }: { item: Item; onClose: () =>
     const [mostRecent] = activePurchases
     return (
       <ReconciliationPrompt
+        itemName={item.name}
         existingPurchase={mostRecent}
         newEstimatedExpiry={estimatedExpiry}
+        addedQuantity={quantity}
         onClose={onClose}
         onExtend={() =>
-          extendPurchase.mutate({ id: mostRecent.id, estimated_expiry: estimatedExpiry }, { onSuccess: afterLogged })
+          extendPurchase.mutate(
+            { id: mostRecent.id, estimated_expiry: estimatedExpiry, quantity: mostRecent.quantity + quantity },
+            { onSuccess: afterLogged }
+          )
         }
         onNewBatch={logAsNewBatch}
       />
@@ -54,6 +61,10 @@ export function LogPurchaseModal({ item, onClose }: { item: Item; onClose: () =>
             onChange={(e) => setPurchaseDate(e.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
+        </div>
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium text-slate-700">Quantity</label>
+          <QuantityStepper value={quantity} onChange={setQuantity} />
         </div>
         <p className="text-sm text-slate-500">
           {estimatedExpiry
