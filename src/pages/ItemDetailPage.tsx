@@ -43,12 +43,12 @@ export function ItemDetailPage() {
       <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm">
         <div className="flex justify-between py-1">
           <span className="text-slate-500">Default shelf life</span>
-          <span className="text-slate-900">{item.default_shelf_life_days ? `${item.default_shelf_life_days} days` : '—'}</span>
+          <span className="text-slate-900">{item.default_shelf_life_days != null ? `${item.default_shelf_life_days} days` : '—'}</span>
         </div>
         <div className="flex justify-between py-1">
           <span className="text-slate-500">Learned shelf life</span>
           <span className="text-slate-900">
-            {item.learned_shelf_life_days ? `${Math.round(item.learned_shelf_life_days)} days` : 'Not enough data yet'}
+            {item.learned_shelf_life_days != null ? `${Math.round(item.learned_shelf_life_days)} days` : 'Not enough data yet'}
           </span>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { toDateInputValue } from '../lib/shelfLife'
 import type { Purchase } from '../types/database'
 
 /** All non-finished purchases for an item — used to detect existing stock for reconciliation. */
@@ -88,7 +89,7 @@ export function useLogUsage() {
         .from('purchases')
         .update({
           usage_status,
-          used_date: usage_status === 'finished' ? new Date().toISOString().slice(0, 10) : null,
+          used_date: usage_status === 'finished' ? toDateInputValue(new Date()) : null,
         })
         .eq('id', id)
         .select()
