@@ -2,19 +2,23 @@ import { Modal } from '../common/Modal'
 import { useLogUsage } from '../../hooks/usePurchases'
 import { useRequestItem } from '../../hooks/useSelections'
 import { useMemberContext } from '../../context/MemberContext'
+import { useListContext } from '../../context/ListContext'
 import type { Purchase } from '../../types/database'
 
 export function LogUsageModal({ purchase, onClose }: { purchase: Purchase; onClose: () => void }) {
   const logUsage = useLogUsage()
   const requestItem = useRequestItem()
   const { currentMember } = useMemberContext()
+  const { currentList } = useListContext()
 
   function markFinished() {
     logUsage.mutate(
       { id: purchase.id, usage_status: 'finished' },
       {
         onSuccess: () => {
-          if (currentMember) requestItem.mutate({ itemId: purchase.item_id, memberId: currentMember.id })
+          if (currentMember && currentList) {
+            requestItem.mutate({ listId: currentList.id, itemId: purchase.item_id, memberId: currentMember.id })
+          }
           onClose()
         },
       }

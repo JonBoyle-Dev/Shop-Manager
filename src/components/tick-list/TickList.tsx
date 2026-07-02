@@ -3,19 +3,22 @@ import { useCategories, useItems } from '../../hooks/useItems'
 import { usePendingSelections, useToggleSelection } from '../../hooks/useSelections'
 import { useAllPurchases } from '../../hooks/usePurchases'
 import { useMemberContext } from '../../context/MemberContext'
+import { useListContext } from '../../context/ListContext'
 import { CategoryFilterBar } from './CategoryFilterBar'
 import { DietAllergyFilter } from './DietAllergyFilter'
 import { ItemCard } from './ItemCard'
 import { NeedsPanel } from './NeedsPanel'
+import { AddItemModal } from './AddItemModal'
 import { LogPurchaseModal } from '../purchases/LogPurchaseModal'
 import { BatchLogPurchasesModal } from '../purchases/BatchLogPurchasesModal'
 import type { Item } from '../../types/database'
 
 export function TickList() {
   const { currentMember } = useMemberContext()
+  const { currentList } = useListContext()
   const { data: categories, isLoading: categoriesLoading } = useCategories()
   const { data: items, isLoading: itemsLoading, error } = useItems()
-  const { data: pendingSelections } = usePendingSelections()
+  const { data: pendingSelections } = usePendingSelections(currentList ? [currentList.id] : [])
   const { data: allPurchases } = useAllPurchases()
   const toggleSelection = useToggleSelection()
 
@@ -24,6 +27,16 @@ export function TickList() {
   const [purchaseItem, setPurchaseItem] = useState<Item | null>(null)
   const [boughtQuantities, setBoughtQuantities] = useState<Record<string, number>>({})
   const [showBatchModal, setShowBatchModal] = useState(false)
+  const [showAddItemModal, setShowAddItemModal] = useState(false)
+
+  function addOrTickItem(item: Item) {
+    setShowAddItemModal(false)
+    if (!currentMember || !currentList) return
+    const alreadyTicked = pendingSelections?.some((s) => s.item_id === item.id && s.member_id === currentMember.id) ?? false
+    if (!alreadyTicked) {
+      toggleSelection.mutate({ listId: currentList.id, itemId: item.id, memberId: currentMember.id, isTicked: false })
+    }
+  }
 
   const { visibleItems, hiddenForAllergyCount } = useMemo(() => {
     if (!items) return { visibleItems: [] as Item[], hiddenForAllergyCount: 0 }
@@ -76,13 +89,22 @@ export function TickList() {
     [boughtQuantities, items]
   )
 
+  if (!currentList) return null
   if (categoriesLoading || itemsLoading) return <p className="p-6 text-center text-slate-500">Loading items…</p>
   if (error) return <p className="p-6 text-center text-rose-600">Couldn't load items: {(error as Error).message}</p>
 
   return (
     <div className="mx-auto max-w-lg space-y-4 p-4 pb-24">
       <NeedsPanel items={items ?? []} purchases={allPurchases ?? []} />
-      <CategoryFilterBar categories={categories ?? []} selected={selectedCategory} onSelect={setSelectedCategory} />
+      <div className="flex items-center justify-between gap-3">
+        <CategoryFilterBar categories={categories ?? []} selected={selectedCategory} onSelect={setSelectedCategory} />
+        <button
+          onClick={() => setShowAddItemModal(true)}
+          className="shrink-0 rounded-full bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
+        >
+          + Add item
+        </button>
+      </div>
       <DietAllergyFilter matchDietOnly={matchDietOnly} onChange={setMatchDietOnly} hiddenForAllergyCount={hiddenForAllergyCount} />
 
       <div className="space-y-2">
@@ -98,8 +120,8 @@ export function TickList() {
               isTicked={isTicked}
               requesterNames={requesterNames}
               onToggle={() => {
-                if (!currentMember) return
-                toggleSelection.mutate({ itemId: item.id, memberId: currentMember.id, isTicked })
+                if (!currentMember || !currentList) return
+                toggleSelection.mutate({ listId: currentList.id, itemId: item.id, memberId: currentMember.id, isTicked })
               }}
               onLogPurchase={() => setPurchaseItem(item)}
               isBought={item.id in boughtQuantities}
@@ -113,6 +135,16 @@ export function TickList() {
       </div>
 
       {purchaseItem && <LogPurchaseModal item={purchaseItem} onClose={() => setPurchaseItem(null)} />}
+
+      {showAddItemModal && (
+        <AddItemModal
+          items={items ?? []}
+          categories={categories ?? []}
+          onClose={() => setShowAddItemModal(false)}
+          onSelectExisting={addOrTickItem}
+          onCreated={addOrTickItem}
+        />
+      )}
 
       {boughtItems.length > 0 && !showBatchModal && (
         <div className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-white p-3 shadow-lg">

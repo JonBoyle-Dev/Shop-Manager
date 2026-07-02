@@ -7,6 +7,8 @@
 --   members.diet_preferences uses the same vocabulary as diet_tags
 --   members.allergies uses the same vocabulary as allergy_tags
 
+insert into lists (name, is_private) values ('Household', false);
+
 insert into categories (id, label, sort_order) values
   ('fridge_dairy', 'Fridge/Dairy', 10),
   ('fresh_produce', 'Fresh Produce', 20),

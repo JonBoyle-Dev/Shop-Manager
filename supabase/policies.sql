@@ -10,6 +10,7 @@
 alter table categories enable row level security;
 alter table items enable row level security;
 alter table members enable row level security;
+alter table lists enable row level security;
 alter table selections enable row level security;
 alter table purchases enable row level security;
 
@@ -20,5 +21,9 @@ create policy "public insert items" on items for insert with check (true);
 create policy "public update items" on items for update using (true) with check (true);
 
 create policy "public all members" on members for all using (true) with check (true);
+-- "Private" lists are a soft, app-level filter (client only queries lists it
+-- shouldn't hide), not a DB-enforced boundary — consistent with the rest of
+-- this app's open, no-auth, household-trust model.
+create policy "public all lists" on lists for all using (true) with check (true);
 create policy "public all selections" on selections for all using (true) with check (true);
 create policy "public all purchases" on purchases for all using (true) with check (true);

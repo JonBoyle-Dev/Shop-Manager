@@ -6,18 +6,20 @@ export interface SelectionWithMember extends Selection {
   members: { id: string; name: string } | null
 }
 
-/** All pending selections, joined with the requesting member, for requester tagging on the tick list. */
-export function usePendingSelections() {
+/** Pending selections for one list (or several, for the combined shop view), joined with the requesting member. */
+export function usePendingSelections(listIds: string[]) {
   return useQuery({
-    queryKey: ['selections', 'pending'],
+    queryKey: ['selections', 'pending', ...listIds].sort(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('selections')
         .select('*, members(id, name)')
         .eq('status', 'pending')
+        .in('list_id', listIds)
       if (error) throw error
       return data as SelectionWithMember[]
     },
+    enabled: listIds.length > 0,
   })
 }
 
@@ -25,10 +27,12 @@ export function useToggleSelection() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({
+      listId,
       itemId,
       memberId,
       isTicked,
     }: {
+      listId: string
       itemId: string
       memberId: string
       isTicked: boolean
@@ -37,12 +41,12 @@ export function useToggleSelection() {
         const { error } = await supabase
           .from('selections')
           .delete()
-          .match({ item_id: itemId, member_id: memberId, status: 'pending' })
+          .match({ list_id: listId, item_id: itemId, member_id: memberId, status: 'pending' })
         if (error) throw error
       } else {
         const { error } = await supabase
           .from('selections')
-          .insert({ item_id: itemId, member_id: memberId, status: 'pending' })
+          .insert({ list_id: listId, item_id: itemId, member_id: memberId, status: 'pending' })
         if (error) throw error
       }
     },
@@ -50,7 +54,7 @@ export function useToggleSelection() {
   })
 }
 
-/** Marks all pending selections for an item as fulfilled — called when a purchase is logged. */
+/** Marks all pending selections for an item as fulfilled, across every list that requested it — called when a purchase is logged. */
 export function useFulfillSelections() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -67,14 +71,14 @@ export function useFulfillSelections() {
 
 const UNIQUE_VIOLATION = '23505'
 
-/** Re-flags an item as needed, requested by whoever logged it as finished. A no-op if it's already pending. */
+/** Re-flags an item as needed on a list, requested by whoever logged it as finished. A no-op if it's already pending there. */
 export function useRequestItem() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ itemId, memberId }: { itemId: string; memberId: string }) => {
+    mutationFn: async ({ listId, itemId, memberId }: { listId: string; itemId: string; memberId: string }) => {
       const { error } = await supabase
         .from('selections')
-        .insert({ item_id: itemId, member_id: memberId, status: 'pending' })
+        .insert({ list_id: listId, item_id: itemId, member_id: memberId, status: 'pending' })
       if (error && error.code !== UNIQUE_VIOLATION) throw error
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['selections'] }),

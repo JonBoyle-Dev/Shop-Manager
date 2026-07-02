@@ -38,8 +38,19 @@ create table members (
   created_at timestamptz not null default now()
 );
 
+create table lists (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  is_private boolean not null default false,
+  owner_member_id uuid references members(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  check ((is_private and owner_member_id is not null) or (not is_private and owner_member_id is null))
+);
+create index lists_owner_idx on lists (owner_member_id);
+
 create table selections (
   id uuid primary key default gen_random_uuid(),
+  list_id uuid not null references lists(id) on delete cascade,
   member_id uuid not null references members(id) on delete cascade,
   item_id uuid not null references items(id) on delete cascade,
   date_requested timestamptz not null default now(),
@@ -48,10 +59,11 @@ create table selections (
 create index selections_item_idx on selections (item_id);
 create index selections_member_idx on selections (member_id);
 create index selections_status_idx on selections (status);
--- Only one pending request per member/item at a time; re-requesting after
+create index selections_list_idx on selections (list_id);
+-- Only one pending request per list/member/item at a time; re-requesting after
 -- fulfilment is a new row, so this is a partial unique index, not a table constraint.
-create unique index selections_one_pending_per_member_item
-  on selections (member_id, item_id)
+create unique index selections_one_pending_per_list_member_item
+  on selections (list_id, member_id, item_id)
   where status = 'pending';
 
 create table purchases (

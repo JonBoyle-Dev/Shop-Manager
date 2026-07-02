@@ -31,8 +31,17 @@ export interface Member {
   created_at: string
 }
 
+export interface List {
+  id: string
+  name: string
+  is_private: boolean
+  owner_member_id: string | null
+  created_at: string
+}
+
 export interface Selection {
   id: string
+  list_id: string
   member_id: string
   item_id: string
   date_requested: string

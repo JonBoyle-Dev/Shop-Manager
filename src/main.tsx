@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
 import { MemberProvider } from './context/MemberContext.tsx'
+import { ListProvider } from './context/ListContext.tsx'
 
 const queryClient = new QueryClient()
 
@@ -12,9 +13,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <MemberProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <ListProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </ListProvider>
       </MemberProvider>
     </QueryClientProvider>
   </StrictMode>
