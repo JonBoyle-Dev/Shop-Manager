@@ -1,6 +1,6 @@
 # Shop Manager — Household Shopping App
 
-React + Vite + Tailwind + Supabase household app. Family members pick their name (no login), tick items they want, log purchases/usage, and the app learns shelf life over time. **Current scope: phases 1-8 of the 14-phase roadmap, plus an added quantity/batch-purchase-logging feature not in the original plan.**
+React + Vite + Tailwind + Supabase household app. Family members pick their name (no login), then pick a shopping list, tick items they want, log purchases/usage, and the app learns shelf life over time. **Current scope: phases 1-8 of the 14-phase roadmap, plus quantity/batch-purchase-logging, persistent named lists (incl. private lists), a combined-lists shop view, and item search/add — none of which were in the original 14-phase plan.**
 
 ## Structure
 ```
@@ -9,7 +9,7 @@ Shop-Manager/
 │   ├── schema.sql       # tables, enums, indexes — run first
 │   ├── functions.sql    # learned-shelf-life trigger — run second
 │   ├── policies.sql     # RLS (enabled, permissive — no auth exists) — run third
-│   ├── seed.sql         # 13 categories + ~50 starter items — run fourth
+│   ├── seed.sql         # 13 categories + ~50 starter items + default "Household" list — run fourth
 │   └── migrations/      # incremental changes for already-provisioned projects, run in filename order
 └── src/
     ├── lib/
@@ -17,14 +17,14 @@ Shop-Manager/
     │   ├── constants.ts     # diet/allergy tag vocabulary + EXPIRING_SOON_DAYS, kept in sync by hand with seed.sql
     │   └── shelfLife.ts     # pure expiry-estimate helpers (toDateInputValue formats from LOCAL date parts, not toISOString — see below)
     ├── types/database.ts    # hand-written row types, no generated schema
-    ├── context/MemberContext.tsx   # current member, localStorage-persisted
+    ├── context/{MemberContext,ListContext}.tsx   # current member + current list, both localStorage-persisted
     ├── hooks/                # one file per table, react-query wrapped
-    ├── components/{members,tick-list,purchases,usage,common,layout}/
+    ├── components/{members,lists,tick-list,purchases,usage,common,layout}/
     └── pages/                 # route-level screens, mostly thin wrappers over components/
 ```
 
 ## Data model
-`categories` (13 fixed rows) → `items` (diet_tags/allergy_tags as `text[]`, array-overlap filtering) → `members` (diet_preferences/allergies, same tag vocabulary) → `selections` (a member's pending/fulfilled tick) → `purchases` (expiry tracking, usage status, quantity).
+`categories` (13 fixed rows) → `items` (diet_tags/allergy_tags as `text[]`, array-overlap filtering) → `members` (diet_preferences/allergies, same tag vocabulary) → `lists` (named, optionally private with an `owner_member_id`) → `selections` (a member's pending/fulfilled tick, scoped to a list) → `purchases` (expiry tracking, usage status, quantity — list-agnostic, since physical stock isn't owned by a list).
 
 ## Key design decisions
 - **No auth.** Household-scale trust — member selection is just picking a name, persisted in localStorage. RLS stays *enabled* with permissive `USING (true)` policies rather than disabled, to avoid tripping Supabase's security linter and to document the openness as intentional.
@@ -36,6 +36,10 @@ Shop-Manager/
 - **Batch purchase logging** (`BatchLogPurchasesModal`) processes items sequentially, one shared date, auto-logging items with no existing stock and reusing `ReconciliationPrompt` per-item for ones that already have active stock. Extending adds the new quantity to the existing batch's quantity rather than replacing it.
 - **Manual low-stock flagging** (mentioned in the original plan) has no separate mechanism — it's just the existing want-tick, since that already means "this is needed."
 - **Restock-overdue reminders only fire once there's purchase history** for an item (no reminder for "need" items that have simply never been bought yet — that's what ticking is for) and exclude fringe items (no regular cycle to be "overdue" against). Expiring-soon reminders include fringe items.
+- **Lists are separate and persistent** (Household, Holiday, Xmas Gifts, etc.), switched between like switching members. `/tick-list` and `/item/:id` are gated behind both a member *and* a list being selected (`RequireList` in `App.tsx`); `/lists` only needs a member.
+- **Private-list privacy is soft, not DB-enforced** — same trust model as the rest of the app. `useVisibleLists` filters client-side to shared lists plus any private list owned by the current member; RLS still permits reading everything. Switching members clears the current list (`NavBar.switchMember`) so you don't stay parked on someone else's private list.
+- **Purchases and fulfilment stay list-agnostic on purpose.** `useFulfillSelections` matches by `item_id` only, not `list_id` — so if the same item is pending on two lists, logging one purchase fulfils both. This is what makes the combined shop view (`/shop-combined`) work: it has no ticking of its own, just merged reads + purchase logging that resolves back to whichever list(s) asked for the item.
+- **Clearing a list permanently deletes its pending ticks** (no archive/undo) — a deliberate choice, not a shortcut.
 
 ## Out of scope for this build
 Photo inventory log, till slip/receipt logging (with or without OCR), weekly digest view, purchase-frequency learning from receipts, recipe matching engine. These are phases 9-14 of the original roadmap — see the user's original plan doc for the full spec if picking this back up.
