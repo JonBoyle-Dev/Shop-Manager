@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useCategories, useItems } from '../../hooks/useItems'
 import { usePendingSelections, useToggleSelection } from '../../hooks/useSelections'
+import { useAllPurchases } from '../../hooks/usePurchases'
 import { useMemberContext } from '../../context/MemberContext'
 import { CategoryFilterBar } from './CategoryFilterBar'
 import { DietAllergyFilter } from './DietAllergyFilter'
 import { ItemCard } from './ItemCard'
+import { NeedsPanel } from './NeedsPanel'
 import { LogPurchaseModal } from '../purchases/LogPurchaseModal'
 import { BatchLogPurchasesModal } from '../purchases/BatchLogPurchasesModal'
 import type { Item } from '../../types/database'
@@ -14,6 +16,7 @@ export function TickList() {
   const { data: categories, isLoading: categoriesLoading } = useCategories()
   const { data: items, isLoading: itemsLoading, error } = useItems()
   const { data: pendingSelections } = usePendingSelections()
+  const { data: allPurchases } = useAllPurchases()
   const toggleSelection = useToggleSelection()
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -78,6 +81,7 @@ export function TickList() {
 
   return (
     <div className="mx-auto max-w-lg space-y-4 p-4 pb-24">
+      <NeedsPanel items={items ?? []} purchases={allPurchases ?? []} />
       <CategoryFilterBar categories={categories ?? []} selected={selectedCategory} onSelect={setSelectedCategory} />
       <DietAllergyFilter matchDietOnly={matchDietOnly} onChange={setMatchDietOnly} hiddenForAllergyCount={hiddenForAllergyCount} />
 

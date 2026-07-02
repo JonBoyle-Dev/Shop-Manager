@@ -33,6 +33,7 @@ export function ItemCard({
           </Link>
           <div className="mt-1 flex flex-wrap items-center gap-1">
             {item.need_or_want === 'need' && <TagBadge label="need" variant="neutral" />}
+            {item.fringe && <TagBadge label="occasional" variant="fringe" />}
             {item.allergy_tags.map((tag) => (
               <TagBadge key={tag} label={tag} variant="allergy" />
             ))}

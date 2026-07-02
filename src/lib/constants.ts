@@ -22,3 +22,6 @@ export const CATEGORY_ORDER = [
 ] as const
 
 export const CURRENT_MEMBER_STORAGE_KEY = 'shop-manager:current-member-id'
+
+/** A purchase counts as "expiring soon" once its estimated expiry is this many days away or closer. */
+export const EXPIRING_SOON_DAYS = 3

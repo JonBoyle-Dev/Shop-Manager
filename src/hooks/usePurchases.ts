@@ -38,9 +38,27 @@ export function usePurchaseHistory(itemId: string | undefined) {
   })
 }
 
+export type PurchaseSummary = Pick<Purchase, 'item_id' | 'purchase_date' | 'estimated_expiry' | 'usage_status'>
+
+/** All purchases, trimmed down — used to compute expiring-soon and restock-overdue reminders. */
+export function useAllPurchases() {
+  return useQuery({
+    queryKey: ['purchases', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('purchases')
+        .select('item_id, purchase_date, estimated_expiry, usage_status')
+        .order('purchase_date', { ascending: false })
+      if (error) throw error
+      return data as PurchaseSummary[]
+    },
+  })
+}
+
 function invalidatePurchaseQueries(queryClient: ReturnType<typeof useQueryClient>, itemId: string) {
   queryClient.invalidateQueries({ queryKey: ['purchases', 'active', itemId] })
   queryClient.invalidateQueries({ queryKey: ['purchases', 'history', itemId] })
+  queryClient.invalidateQueries({ queryKey: ['purchases', 'all'] })
   queryClient.invalidateQueries({ queryKey: ['items', itemId] })
   queryClient.invalidateQueries({ queryKey: ['items'] })
 }
